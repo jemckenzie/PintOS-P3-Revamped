@@ -3,6 +3,7 @@
 
 /* Included for locking/synchronization reasons for later frame eviction. */
 #include "threads/synch.h"
+#include "vm/page.h"
 
 struct frame
 {
@@ -16,6 +17,6 @@ void frame_initialize(void);
 struct frame *frame_allocate(struct page *);
 void lock_frame(struct page *);
 void unlock_frame(struct frame *);
-void free_frame(struct frame *)
+void free_frame(struct frame *);
 
 #endif

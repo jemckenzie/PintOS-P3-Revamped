@@ -20,5 +20,13 @@ struct page
 
 
 };
+void page_destroy(struct hash_elem *);
+bool page_compare(struct hash_elem *, struct hash_elem *);
+unsigned page_hash(struct hash_elem *);
+void pagetable_teardown(void);
+void deallocate_page(void *);
+struct page *page_for_address(void *);
+struct page *allocate_page(void *, bool);
+
 
 #endif

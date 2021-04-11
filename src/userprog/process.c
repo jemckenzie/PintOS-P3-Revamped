@@ -18,6 +18,8 @@
 #include "threads/palloc.h"
 #include "threads/thread.h"
 #include "threads/vaddr.h"
+#include "vm/page.h"
+#include "vm/frame.h"
 
 static thread_func start_process NO_RETURN;
 static bool load (const char *cmd_line, void (**eip) (void), void **esp);
@@ -170,6 +172,10 @@ process_exit (void)
   /* Close executable (and allow writes). */
   file_close (cur->bin_file);
 
+  // PROJECT 3 //
+  /* Get rid of the page hash table for this process */
+  pagetable_teardown();
+
   /* Notify parent that we're dead. */
   if (cur->wait_status != NULL) 
     {
@@ -216,6 +222,15 @@ process_activate (void)
 
   /* Activate thread's page tables. */
   pagedir_activate (t->pagedir);
+
+  // PROJECT 3 //
+  /* Set up a supplemental page hash table for this process */
+  t->pages = malloc(sizeof *t->pages);
+  if(t->pages != NULL)
+  {
+    hash_init(t->pages, page_hash, page_compare, NULL);
+    //NEED SOME CODE HERE TO INITIALIZE THE HASH TABLE!! -> Crhis
+  }
 
   /* Set thread's kernel stack for use in processing
      interrupts. */
@@ -611,19 +626,31 @@ init_cmd_line (uint8_t *kpage, uint8_t *upage, const char *cmd_line,
 static bool
 setup_stack (const char *cmd_line, void **esp) 
 {
-  uint8_t *kpage;
-  bool success = false;
+  //uint8_t *kpage;
+  // PROJECT 3 //
+  /* Reusing this in our new page implementation. */
+  bool success;
 
-  kpage = palloc_get_page (PAL_USER | PAL_ZERO);
-  if (kpage != NULL) 
+  // PROJECT 3 //
+  struct page *user_page = allocate_page(((uint8_t *) PHYS_BASE - PGSIZE), false);
+  //kpage = palloc_get_page (PAL_USER | PAL_ZERO);
+  if (user_page != NULL) 
     {
-      uint8_t *upage = ((uint8_t *) PHYS_BASE) - PGSIZE;
-      if (install_page (upage, kpage, true))
-        success = init_cmd_line (kpage, upage, cmd_line, esp);
-      else
-        palloc_free_page (kpage);
+      user_page->frame = frame_allocate(user_page);
+      /* If we successfully allocate a frame to our page, need to remember to set up command line args, set up proper page fields. */
+      if (user_page->frame != NULL)
+      {
+        /* Parameters here need to be the frame's base address since a "frame" in PintOS is just a page in kernel virtual memory. */
+        success = init_cmd_line (user_page->frame->base, user_page->addr, cmd_line, esp);
+        //may need some field initialization for memory mapped files later on.
+        /* Unlock the frame after it's operations are completed. */
+        unlock_frame(user_page->frame);
+        return success;
+      }
+      //else
+      //palloc_free_page (kpage);
     }
-  return success;
+  return false;
 }
 
 /* Adds a mapping from user virtual address UPAGE to kernel

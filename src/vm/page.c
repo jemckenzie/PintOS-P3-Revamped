@@ -7,6 +7,7 @@
 #include "threads/thread.h"
 #include "userprog/pagedir.h"
 #include "threads/vaddr.h"
+#include <hash.h>
 
 
 /* Function is used to map a page at vaddr to the page hash table structure.  Returns page
@@ -57,9 +58,25 @@ struct page *page_for_address(void *address)
     }
 }
 
+/* Removes the page at the given address and removes it from the page table. */
 void deallocate_page(void *vaddr)
 {
-    struct page *page = 
+    /* Find the page given the virtual address. */
+    struct page *page = page_for_address(vaddr);
+    if(page != NULL)
+    {
+        lock_frame(page);
+        if(page->frame != NULL)
+        {
+            struct frame *frame = page->frame;
+            //ADDITIONS MUST GO HERE.
+
+            free_frame(frame);
+        }
+        /* Remove it from the hash table and free its allocated memory. */
+        hash_delete(thread_current()->pages, &page->hash_elem);
+        free(page);
+    }
 }
 
 /* This function destroys the page associated with the passed-in hash table element p in the current thread's
@@ -89,4 +106,21 @@ void pagetable_teardown(void)
     {
         hash_destroy(current_pages, page_destroy);
     }
+}
+
+/* This compares the address space of two pages a & b, returns true if the address of a is before b. Necessary for the hash_init functionality. */
+bool page_compare(struct hash_elem *a_elem, struct hash_elem *b_elem)
+{
+    const struct page *a_page = hash_entry(a_elem, struct page, hash_elem);
+    const struct page *b_page = hash_entry(b_elem, struct page, hash_elem);
+    return a_page->addr < b_page->addr;
+}
+
+/* Function that returns a hash value for the hash element. */
+unsigned page_hash(struct hash_elem *a)
+{
+    /* Grab the page from the hash elem entry. */
+    const struct page *page = hash_entry(a, struct page, hash_elem);
+    /* We shift by the offset(PGBITS) to get to the actual page number. */
+    return ((uintptr_t) page->addr) >> PGBITS;
 }
