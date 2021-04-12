@@ -27,6 +27,11 @@ static int sys_write (int handle, void *usrc_, unsigned size);
 static int sys_seek (int handle, unsigned position);
 static int sys_tell (int handle);
 static int sys_close (int handle);
+
+///PROJECT 3///
+static mapid_t sys_mmap (int fd_handle, void *addr);
+static void sys_munmap (mapid_t mapping);
+static struct file_descriptor *lookup_fd (int handle);
  
 static void syscall_handler (struct intr_frame *);
 static void copy_in (void *, const void *, size_t);
@@ -70,6 +75,8 @@ syscall_handler (struct intr_frame *f)
       {2, (syscall_function *) sys_seek},
       {1, (syscall_function *) sys_tell},
       {1, (syscall_function *) sys_close},
+      {2, (syscall_function *) sys_mmap},
+      {1, (syscall_function *) sys_munmap}
     };
 
   const struct syscall *sc;
@@ -91,6 +98,26 @@ syscall_handler (struct intr_frame *f)
      and set the return value. */
   f->eax = sc->func (args[0], args[1], args[2]);
 }
+
+///PROJECT 3///
+
+/* Maps a file given by file descriptor FD to memory, starting at address ADDR.
+    Returns the memory mapping (MAPID_T). */
+static mapid_t 
+sys_mmap (int fd_handle, void *addr)
+{
+  struct file_descriptor * fd = lookup_fd(fd_handle);
+
+}
+
+/* Removes a memory mapped file from memory, given a memory map MAPPING. */
+static void 
+sys_munmap (mapid_t mapping)
+{
+
+}
+
+//-PROJECT 3-//
  
 /* Returns true if UADDR is a valid, mapped user address,
    false otherwise. */
