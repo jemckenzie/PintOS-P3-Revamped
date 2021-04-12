@@ -174,7 +174,7 @@ process_exit (void)
 
   // PROJECT 3 //
   /* Get rid of the page hash table for this process */
-  pagetable_teardown();
+  page_table_teardown();
 
   /* Notify parent that we're dead. */
   if (cur->wait_status != NULL) 

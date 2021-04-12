@@ -13,7 +13,6 @@ struct frame
 };
 
 void frame_initialize(void);
-//THESE ERRORS ARE MORE THAN LIKELY BECAUSE WE CURRENTLY HAVE NO PAGE STRUCTURE DEFINED.
 struct frame *frame_allocate(struct page *);
 void lock_frame(struct page *);
 void unlock_frame(struct frame *);

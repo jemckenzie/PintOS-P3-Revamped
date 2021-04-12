@@ -5,14 +5,14 @@
 #include "filesys/off_t.h"
 #include "threads/synch.h"
 
-/* This struct defines a user virtual page, ie the supplemental page table. */
+/* Sinpple page element, used for the supplemental page table. */
 struct page
 {
-    void *addr;                     /* Virtual address of page. */
+    void * addr;                     /* Virtual address of page. */
     struct thread *thread;          /* Thread that "owns" the page. */
     bool read_only;                 /* Indicates the page information is read-only */
 
-    struct frame *frame;            /* Frame this page owns */
+    struct frame * frame;            /* Frame this page owns */
 
     struct hash_elem hash_elem;     /* hash element of page */
 

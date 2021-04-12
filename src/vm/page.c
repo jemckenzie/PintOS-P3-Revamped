@@ -39,22 +39,38 @@ struct page *allocate_page(void *vaddr, bool read_only)
     return p;
 }
 
-//UNFINISHED FUNCTION.
-/* This returns a page for an address passed into it(void *address).  May later implement stack growth here. */
+/* This returns a PAGE for an virtual ADDRESS passed into it.  May later implement stack growth here. */
 struct page *page_for_address(void *address)
 {
     /* We're in user memory. */
-    if(address < PHYS_BASE)
+    if(is_user_vaddr(address))
     {
         struct page p;
         struct hash_elem *e;
 
-        /* Grab the address via the built in paging functionality. */
+        /* Round down address for alignment. */
         p.addr = (void *)pg_round_down(address);
+
+        /* Find page, returns NULL if no page is found. */
         e = hash_find(thread_current()->pages, &p.hash_elem);
-        //e is found in page hash table.
+
+        //return found page
         if(e != NULL)
             return hash_entry(e, struct page, hash_elem);
+
+        /* Stack growth heuristic: */
+        /* First check if ADDR is within maximum possible stack size.
+         Then check if ADDR is whin 32 bytes of ESP, since the maximum decrement is 32 bytes with PUSHA
+         If both hold, a stack access is taking place, and we should extend the stack. */
+
+        if(PHYS_BASE - STACK_SIZE_LIMIT < p.addr
+        && thread_current()->user_esp - 32 < p.addr)
+        {
+            return allocate_page(p.addr, false);
+        }
+
+        /* No page found, and stack growth is not taking place. */
+        return NULL;
     }
 }
 
@@ -85,19 +101,19 @@ page table.  Uses the functionality described in frame.c in order to lock and th
 void page_destroy(struct hash_elem *p)
 {
     /* Grabs the page associated with passed in hash element. */
-    struct page *tmp = hash_entry(p, struct page, hash_elem);
+    struct page *pg = hash_entry(p, struct page, hash_elem);
     //Lock the frame associated with the page, defined in the frame.c file.
-    frame_lock(tmp);
+    lock_frame(pg);
     /* If it has a non-NULL frame, need to free it to destroy the page properly. */
-    if(tmp->frame)
+    if(pg->frame != NULL)
     {
-        free_frame(tmp->frame);
+        free_frame(pg->frame);
     }
-    free(tmp);
+    free(pg);
 }
 
 /* This function is used to destroy the page table(which is stored as a hash table in our implementation) of the current process. */
-void pagetable_teardown(void)
+void page_table_teardown(void)
 {
     /* Grab the page table from the current thread, which we store as a hash table. */
     struct hash *current_pages = thread_current()->pages;

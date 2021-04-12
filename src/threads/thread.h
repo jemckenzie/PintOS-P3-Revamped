@@ -21,6 +21,13 @@ enum thread_status
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
 
+///PROJECT 3///
+
+/* Maximum stack size in bytes, using 4MB for now. */
+#define STACK_SIZE_LIMIT 4*(1024)
+
+//-PROJECT 3-//
+
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
 #define PRI_DEFAULT 31                  /* Default priority. */
@@ -98,7 +105,12 @@ struct thread
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
-    struct hash *pages;                 /* The page table associated with this thread */
+
+    ///PROJECT 3///
+
+    struct hash *pages;                 /* The page table associated with this thread */    
+
+    //-PROJECT 3-//
 
 #ifdef USERPROG
     /* Owned by userprog/process.c. */

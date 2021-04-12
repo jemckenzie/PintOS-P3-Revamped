@@ -1,6 +1,5 @@
 #include "vm/frame.h"
 #include <stdio.h>
-//#include "vm/page.h"
 #include "devices/timer.h"
 #include "threads/init.h"
 #include "threads/malloc.h"
@@ -18,10 +17,10 @@ static size_t frame_count;
 /* Helps us with eviction and allocation of frames */
 struct lock frame_lock;
 
-/* This initializes the continuous virtual memory for kernel frames for us to manage. */
+/* Initializes the frame table. */
 void frame_initialize(void)
 {
-    void *base;
+    void * base;
 
     lock_init(&frame_lock);
     /* Initialize enough space to cover the number of frames in pages of 4kB as is stored in RAM. */
@@ -30,13 +29,13 @@ void frame_initialize(void)
     /* If for some reason we can't malloc these frames, panic the kernel. */
     if(frames == NULL)
     {
-        PANIC("You are out of kernel memory, failed.");
+        PANIC("Frame table malloc failed.");
     }
 
     /* Each time through, a new page base address is given by palloc_get_page function. */
-    while(base = palloc_get_page(PAL_USER) != NULL)
+    while(base = (void *)palloc_get_page(PAL_USER) != NULL)
     {
-        frame_count = frame_count++;
+        frame_count++;
         struct frame *new_frame = &frames[frame_count];
         lock_init(&new_frame->frame_lock);
         /* Base address is given by the loop, no page is associated upon initialization. */
@@ -76,9 +75,9 @@ struct frame *frame_allocate(struct page *page)
 
 /* Locks a page's frame into memory if page has a frame.
 Use unlock_frame to unlock the frame from the page. */
-void lock_frame(struct page *page)
+void lock_frame(struct page * page)
 {
-    struct frame *frame = page->frame;
+    struct frame * frame = page->frame;
     if(frame != NULL)
     {
         lock_acquire(&frame->frame_lock);
@@ -95,14 +94,14 @@ void lock_frame(struct page *page)
 /* Simply unlocks the frame so that it can be evicted or otherwise operated upon. */
 void unlock_frame(struct frame *frame)
 {
-    /* Avoid a race condition */
+    /* Check if thread owns the frame, if not, panic. */
     ASSERT(lock_held_by_current_thread(&frame->frame_lock));
     lock_release(&frame->frame_lock);
 }
 
 void free_frame(struct frame *frame)
 {
-    /* Avoid a race condition */
+    /* Check if thread owns the frame, if not, panic. */
     ASSERT(lock_held_by_current_thread(&frame->frame_lock));
     /* Dissociate any pages from this frame. */
     frame->page = NULL;
