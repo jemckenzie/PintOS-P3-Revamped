@@ -1,21 +1,23 @@
 #ifndef VM_FRAME_H
 #define VM_FRAME_H
 
-/* Included for locking/synchronization reasons for later frame eviction. */
+#include <stdbool.h>
 #include "threads/synch.h"
-#include "vm/page.h"
 
-struct frame
-{
-    struct lock frame_lock;     /* Prevent frame access from multiple pages. */
-    void *base;                 /* Virtual base address of the kernel page associated with the frame. */
-    struct page *page;          /* Process page. */
-};
+/* A physical frame. */
+struct frame 
+  {
+    struct lock lock;           /* Prevent simultaneous access. */
+    void *base;                 /* Kernel virtual base address. */
+    struct page *page;          /* Mapped process page, if any. */
+  };
 
-void frame_initialize(void);
-struct frame *frame_allocate(struct page *);
-void lock_frame(struct page *);
-void unlock_frame(struct frame *);
-void free_frame(struct frame *);
+void frame_init (void);
 
-#endif
+struct frame *frame_alloc_and_lock (struct page *);
+void frame_lock (struct page *);
+
+void frame_free (struct frame *);
+void frame_unlock (struct frame *);
+
+#endif /* vm/frame.h */

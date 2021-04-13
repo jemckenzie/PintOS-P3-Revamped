@@ -2,10 +2,10 @@
 #define THREADS_THREAD_H
 
 #include <debug.h>
+#include <hash.h>
 #include <list.h>
 #include <stdint.h>
 #include "threads/synch.h"
-#include <stdio.h>
 
 /* States in a thread's life cycle. */
 enum thread_status
@@ -20,13 +20,6 @@ enum thread_status
    You can redefine this to whatever type you like. */
 typedef int tid_t;
 #define TID_ERROR ((tid_t) -1)          /* Error value for tid_t. */
-
-///PROJECT 3///
-
-/* Maximum stack size in bytes, using 4MB for now. */
-#define STACK_SIZE_LIMIT 4*(1024)
-
-//-PROJECT 3-//
 
 /* Thread priorities. */
 #define PRI_MIN 0                       /* Lowest priority. */
@@ -100,28 +93,28 @@ struct thread
     struct list_elem allelem;           /* List element for all threads list. */
 
     /* Owned by process.c. */
+    int exit_code;                      /* Exit code. */
     struct wait_status *wait_status;    /* This process's completion status. */
     struct list children;               /* Completion status of children. */
 
     /* Shared between thread.c and synch.c. */
     struct list_elem elem;              /* List element. */
 
-    ///PROJECT 3///
+    /* Alarm clock. */
+    int64_t wakeup_time;                /* Time to wake this thread up. */
+    struct list_elem timer_elem;        /* Element in timer_wait_list. */
+    struct semaphore timer_sema;        /* Semaphore. */
 
-    struct hash *pages;                 /* The page table associated with this thread */    
-
-    //-PROJECT 3-//
-
-#ifdef USERPROG
     /* Owned by userprog/process.c. */
     uint32_t *pagedir;                  /* Page directory. */
-#endif
-    struct file *bin_file;              /* Executable. */
+    struct hash *pages;                 /* Page table. */
+    struct file *bin_file;              /* The binary executable. */
 
     /* Owned by syscall.c. */
     struct list fds;                    /* List of file descriptors. */
+    struct list mappings;               /* Memory-mapped files. */
     int next_handle;                    /* Next handle value. */
-    void *user_esp;                     /* User stack pointer */
+    void *user_esp;                     /* User's stack pointer. */
 
     /* Owned by thread.c. */
     unsigned magic;                     /* Detects stack overflow. */
