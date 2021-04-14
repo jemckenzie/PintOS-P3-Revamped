@@ -52,8 +52,16 @@ page_for_addr (const void *address)
 
       /* No page.  Expand stack? */
 
-/* add code */
+      /* Stack growth heuristic: */
+        /* First check if ADDR is within maximum possible stack size.
+         Then check if ADDR is whin 32 bytes of ESP, since the maximum decrement is 32 bytes with PUSHA
+         If both hold, a stack access is taking place, and we should extend the stack. */
 
+        if(PHYS_BASE - STACK_SIZE_LIMIT < p.addr
+        && thread_current()->user_esp - 32 < p.addr)
+        {
+            return page_allocate(p.addr, false);
+        }
     }
   return NULL;
 }
