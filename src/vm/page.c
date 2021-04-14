@@ -152,16 +152,36 @@ page_out (struct page *p)
      process to fault.  This must happen before checking the
      dirty bit, to prevent a race with the process dirtying the
      page. */
-
+  pagedir_clear_page(p->thread->pagedir, (void*) p->addr);
 /* add code here */
 
   /* Has the frame been modified? */
+  //modified meaning it is dirty
+  dirty = pagedir_is_dirty(p->thread->pagedir, (const void*) p->addr);
 
-/* add code here */
+  if(!dirty)
+    ok = true;
 
   /* Write frame contents to disk if necessary. */
+  //We only want to write to disk if the file is not null, if it is we want to try and swap it out and state if it was successful or not
+  if(p->file == NULL)
+    ok = swap_out(p);
 
-/* add code here */
+  //otherwise we can either write to the disk, if p->private is false, or swap out, if p->private is true, give the file is dirty
+  else
+  {
+    if(dirty)
+    {
+      if(p->private)
+        ok = swap_out(p);
+      else
+        ok = file_write_at(p->file, (const void*) p->frame->base, p->file_bytes, p->file_offset);
+    }
+  }
+
+  //finally, set the frame held by the page to null
+  if(ok)
+    p->frame = NULL;
 
   return ok;
 }
