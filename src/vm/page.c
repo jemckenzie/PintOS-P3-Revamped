@@ -57,8 +57,8 @@ page_for_addr (const void *address)
          Then check if ADDR is whin 32 bytes of ESP, since the maximum decrement is 32 bytes with PUSHA
          If both hold, a stack access is taking place, and we should extend the stack. */
 
-        if(PHYS_BASE - STACK_SIZE_LIMIT < p.addr
-        && thread_current()->user_esp - 32 < p.addr)
+        if(PHYS_BASE - STACK_MAX < p.addr
+        && thread_current()->user_esp - 32 < address)
         {
             return page_allocate(p.addr, false);
         }
