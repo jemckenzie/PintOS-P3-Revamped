@@ -1,70 +1,131 @@
-		           +---------------------------+
-       	           |         CIS 520           |
-		           | PROJECT 3: Virtual Memory |
-		           |     DESIGN DOCUMENT       |
-		           +---------------------------+
+﻿+---------------------------+
+                                     |         CIS 520           |
+                           | PROJECT 3: Virtual Memory |
+                           |     DESIGN DOCUMENT       |
+                           +---------------------------+
+
 
 ---- GROUP ----
 
+
 >> Fill in the names of your group members.
 
-FirstName LastName
-FirstName LastName
-FirstName LastName
+
+Jack McKenzie
+Branden Bearden
+Cesar Zavala
+
 
 ---- PRELIMINARIES ----
 
+
 >> If you have any preliminary comments on your submission, notes for the
 >> TAs, or extra credit, please give them here.
+
+
+STACK_MAX is an int representing 1024*1024 bytes.
+
 
 >> Please cite any offline or online sources you consulted while
 >> preparing your submission, other than the Pintos documentation, course
 >> text, lecture notes, and course staff.
 
-			PAGE TABLE MANAGEMENT
-			=====================
+
+Very useful repositories:
+-Pintos by Hang Park, https://github.com/hangpark/pintos
+-Pintos P3 by Christian Hughes, https://github.com/ChristianJHughes/pintos-project3
+
+
+                        PAGE TABLE MANAGEMENT
+                        =====================
+
 
 ---- ALGORITHMS ----
+
 
 >> A1: In a few paragraphs, describe the existing code for locating the
 >> frame, if any, that contains the data of a given page.
 
+
+To find a page’s frame we use the “struct frame * frame” property of a page struct, which contains the virtual address of the frame. If the page does not have any frame associated to it (swapped out), the frame pointer will be NULL.
+
+
+Each page gets a frame assigned by the frame_alloc_and_lock() function, which tries to either get a free frame or evicts another used frame. The try_frame_alloc_and_lock() functions iterates through all the frames to find a free one, and if none are found, it evicts a frame as follows:
+ -If a frame has a NULL page pointer, take over the frame.
+-If the page was not accessed recently, evict.
+
+
+If there are no free frames and the swap is full, the kernel should panic.
+
+
 ---- SYNCHRONIZATION ----
+
 
 >> A2: When two user processes both need a new frame at the same time,
 >> how are races avoided?
+Each time a frame is accessed within the frame, that process is assigned a lock called the scan_lock.  This ensures only one process can search into the frame table at a time, and the frame table is not altered by another process while in the process of searching.  Each frame struct also has its own associated lock that is used to lock pages(to indicate occupation) into its representative kernel virtual memory mapping.
 
-		       PAGING TO AND FROM DISK
-		       =======================
+
+                       PAGING TO AND FROM DISK
+                       =======================
+
 
 ---- ALGORITHMS ----
 
+
 >> B1: When a frame is required but none is free, some frame must be
 >> evicted.  Describe the algorithm used to choose a frame to evict.
+
+
+The algorithm used is a least recently used algorithm.  We first search through the list of frames in the frame table and attempt to find a frame with no associated page occupying it, and if we cannot, we search through each frame’s associated page and check for recent accesses.  If the page was recently accessed, we simply disregard in the name of time locality and move on until we find one that was not.  Once we find a non recently used page, we evict it from the page table and associate the newly acquired frame with the page passed in.  If all pages were recently used, we repeat the iteration once more, and return null if the second iteration fails.  
+
 
 >> B2: Explain your heuristic for deciding whether a page fault for an
 >> invalid virtual address should cause the stack to be extended into
 >> the page that faulted.
 
-			 MEMORY MAPPED FILES
-			 ===================
+
+Pages are searched for in our page_for_addr function, which checks the address passed into the function against the hash table we used to store the supplemental page table to see that it is an existing page within the stack space we allocated(1MB of stack space).  Next, we use our stack growth heuristic to check that the user is accessing an address within 32 bytes of the stack pointer of the user process that faulted.  This is to account for the space needed for the PUSHA command in x86 that pushes all general purpose registers onto the stack.  If it passes both of these checks, we allocate another stack page using the page_allocate function defined in page.c, which handles the page’s associated struct member initializations as well as the insertion into the supplemental page hash table.  
+
+
+                         MEMORY MAPPED FILES
+                         ===================
+
 
 ---- DATA STRUCTURES ----
+
 
 >> C1: Copy here the declaration of each new or changed `struct' or
 >> `struct' member, global or static variable, `typedef', or
 >> enumeration.  Identify the purpose of each in 25 words or less.
 
+
+We did not add anything that we used in our code, besides what was given in the project3_recompiled code.
+
+
 ---- ALGORITHMS ----
+
 
 >> C2: Describe how memory mapped files integrate into your virtual
 >> memory subsystem.  Explain how the page fault and eviction
 >> processes differ between swap pages and other pages.
 
+
+Mapped files are a struct inside of syscall.c. Each mapping has a reference to its memory address. Just like in project 2, each thread has a list of files used to keep track of and manage files in memory. Pages that contain file information in memory are controlled like any other.
+Pages that do not contain files are swapped out when evicted.  Pages can only be swapped back in when they are dirty, have been modified.  Memory mapped files do not swap.
+
+
 >> C3: Explain how you determine whether a new file mapping overlaps
 >> any existing segment.
 
+
+The sys_mmap system call performs our file mapping heuristic, and it uses the page_allocate() function in page.c to determine whether a page is present or not at the memory address passed into it.  The function checks for file mappings within it using the page struct defined in the project3_recompiled code.  It checks for a file’s existence, its offset, as well as the bytes to read/write.  If a space is already occupied, the file cannot be mapped to that space, so it will be unmapped, and the process returns a status code of -1, causing it to fail.  
+
+
+
+
 ---- RATIONALE ----
+
 
 >> C4: Mappings created with "mmap" have similar semantics to those of
 >> data demand-paged from executables, except that "mmap" mappings are
@@ -73,8 +134,13 @@ FirstName LastName
 >> implementation either does or does not share much of the code for
 >> the two situations.
 
-			   SURVEY QUESTIONS
-			   ================
+
+Our implementation does share much of the code for these two situations. Page_out() is where this is implemented and the private variable in the page struct determines if the page is written to disk if the private variable is false, or swapped out when the private variable is set to true. This also all depends on if the page is dirty, if so then we can check the private variable.
+
+
+                           SURVEY QUESTIONS
+                           ================
+
 
 Answering these questions is optional, but it will help us improve the
 course in future quarters.  Feel free to tell us anything you
@@ -82,17 +148,22 @@ want--these questions are just to spur your thoughts.  You may also
 choose to respond anonymously in the course evaluations at the end of
 the quarter.
 
+
 >> In your opinion, was this assignment, or any one of the three problems
 >> in it, too easy or too hard?  Did it take too long or too little time?
 
+
 >> Did you find that working on a particular part of the assignment gave
 >> you greater insight into some aspect of OS design?
+
 
 >> Is there some particular fact or hint we should give students in
 >> future quarters to help them solve the problems?  Conversely, did you
 >> find any of our guidance to be misleading?
 
+
 >> Do you have any suggestions for the TAs to more effectively assist
 >> students, either for future quarters or the remaining projects?
+
 
 >> Any other comments?
